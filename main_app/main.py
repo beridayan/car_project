@@ -8,12 +8,14 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 import time
 
+
 # פתח דפדפן (כאן כרום)
 # עבור לאתר
 def clean_price(price_str):
     # מסיר את כל התווים פרט למספרים
     return int(''.join(filter(str.isdigit, price_str)))
 def carzone(car_name: str, car_year: str,marketing :str):
+    
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 
 
@@ -84,12 +86,44 @@ def send_list_email(sender_email: str, receiver_email: str, app_password: str, s
     except Exception as e:
         print("❌ Failed to send email:", e)
 
+def send_str_email(sender_email: str, receiver_email: str, app_password: str, subject: str, item_list: list):
+    """
+    Sends a list of items as an email.
+
+    Args:
+        sender_email (str): Your Gmail address.
+        receiver_email (str): Recipient's email address (can be the same as sender).
+        app_password (str): Gmail App Password (not your Gmail password).
+        subject (str): Subject line of the email.
+        item_list (list): The list of items to send.
+    """
+    # Email body (as plain text)
+    body = "Here is the list:\n\n" + "\n" + item_list
+
+    # Set up the email
+    message = MIMEMultipart()
+    message["From"] = sender_email
+    message["To"] = receiver_email
+    message["Subject"] = subject
+    message.attach(MIMEText(body, "plain"))
+
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(sender_email, app_password)
+            server.sendmail(sender_email, receiver_email, message.as_string())
+        print("✅ Email sent successfully.")
+    except Exception as e:
+        print("❌ Failed to send email:", e)
 
 
 
  
 from yad2_scraper import fetch_vehicle_category, OrderVehiclesBy
-i=4
+i=1
+count =1
+good_prices = []
+links = []
+
 while (True):
     try:
         category = fetch_vehicle_category(
@@ -103,7 +137,6 @@ while (True):
     except:
         break
     cars = category.get_tags()
-    good_prices = []
     for car in cars:
         name = getattr(car, 'model', 'No name')
         year = getattr(car, 'year', 'No year')
@@ -118,23 +151,40 @@ while (True):
         if carzone_price != None:
             num = percentage_change(int(clean_price(carzone_price)), int(clean_price(price)))
 
-            if num > 33 and num <60:
+            if num > 34 and num <75:
                 if(link != None and price != None):
                     print("https://www.yad2.co.il/vehicles/"+link)
                     print(f"og price is {price} and mehiron price {carzone_price}")
                     to_save = "https://www.yad2.co.il/vehicles/"+link+f" \n og price is {price} and mehiron price {carzone_price}"
+                    links.append("https://www.yad2.co.il/vehicles/"+link)
                     good_prices.append(to_save)
                     print(good_prices)
+                    
+                    # send_str_email(
+                    #     sender_email="beridayan2008@gmail.com",
+                    #     receiver_email="icon333@gmail.com",
+                    #     app_password="qapuzlpqfeiueerl",  # No spaces!
+                    #     subject=f"Filtered Cars from Yad2 {count}",
+                    #     item_list=to_save)
+
+                    send_str_email(
+                         sender_email="beridayan2008@gmail.com",
+                           receiver_email="beridayan2008@gmail.com",
+                         app_password="qapuzlpqfeiueerl",  # No spaces!
+                         subject=f"Filtered Cars from Yad2 {count}",
+                         item_list=to_save)
+                    count+=1
 
             else:
                 print('change is less then 30 ' + str(num))
                 print(f"og price is {price} and mehiron price {carzone_price}")
     i+=1
-    send_list_email(
-        sender_email="beridayan2008@gmail.com",
-        receiver_email="beridayan2008@gmail.com",
-        app_password="qapuzlpqfeiueerl",  # No spaces!
-        subject=f"Filtered Cars from Yad2 {i}",
-        item_list=good_prices)
-    if i ==7:
+   
+    if i ==6:
+        send_list_email(
+            sender_email="beridayan2008@gmail.com",
+            receiver_email="beridayan2008@gmail.com",
+            app_password="qapuzlpqfeiueerl",  # No spaces!
+            subject=f"full list filterd cars ",
+            item_list=good_prices)
         break
