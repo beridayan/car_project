@@ -7,6 +7,94 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 import time
+import undetected_chromedriver as uc
+from bs4 import BeautifulSoup
+from datetime import datetime, timedelta
+import re
+
+import re
+import undetected_chromedriver as uc
+from datetime import datetime, timedelta
+from bs4 import BeautifulSoup
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+def check_yad2_conditions_with_hand_km_and_date(url):
+    options = uc.ChromeOptions()
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--disable-dev-shm-usage")
+    driver = uc.Chrome(options=options)
+
+    try:
+        # 1) Load page & wait for all three elements
+        driver.get(url)
+        wait = WebDriverWait(driver, 20)
+        wait.until(EC.presence_of_element_located((By.CLASS_NAME, "details-item_itemValue__r0R14")))
+        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'span[data-testid="term"]')))
+        wait.until(EC.presence_of_element_located((By.CLASS_NAME, "report-ad_createdAt__MhAb0")))
+
+        # 2) Parse the page
+        soup = BeautifulSoup(driver.page_source, "html.parser")
+
+        # — hand (0–6)
+        hand = None
+        for span in soup.find_all("span", class_="details-item_itemValue__r0R14"):
+            try:
+                val = int(span.text.strip())
+                if 0 <= val <= 6:
+                    hand = val
+                    break
+            except ValueError:
+                continue
+
+        print(f"Extracted hand: {hand}")
+
+        # — km > 60000
+        km = None
+        for km_span in soup.find_all("span", {"data-testid": "term"}):
+            try:
+                km_val = int(km_span.text.strip().replace(",", ""))
+                if km_val > 60000:
+                    km = km_val
+                    break
+            except ValueError:
+                continue
+
+        print(f"Extracted km: {km}")
+
+        # — date within last 10 days
+        date_span = soup.find("span", class_="report-ad_createdAt__MhAb0")
+        date_ok = False
+        if date_span:
+            text = date_span.get_text(strip=True)
+            match = re.search(r"\d{2}/\d{2}/\d{2}", text)
+            if match:
+                date_str = match.group(0)
+                try:
+                    post_date = datetime.strptime(date_str, "%d/%m/%y").date()
+                    today = datetime.today().date()
+                    ten_days_ago = today - timedelta(days=10)
+                    date_ok = post_date >= ten_days_ago
+                    print(f"Post date: {post_date}, Today: {today}, Date OK? {date_ok}")
+                except ValueError:
+                    print("Error parsing date string")
+        else:
+            print("Date span not found")
+
+        # 3) Final check (ensure hand and km are not None)
+        if hand is not None and km is not None and hand <= 2 and km <= 140000 and date_ok:
+            print("All conditions met, returning True")
+            return True
+
+        print("Conditions not met, returning False")
+        return False
+
+    finally:
+        # ALWAYS runs, even if you return or an exception is thrown
+        driver.quit()
+
 
 
 # פתח דפדפן (כאן כרום)
@@ -122,7 +210,6 @@ from yad2_scraper import fetch_vehicle_category, OrderVehiclesBy
 i=1
 count =1
 good_prices = []
-links = []
 
 while (True):
     try:
@@ -151,14 +238,17 @@ while (True):
         if carzone_price != None:
             num = percentage_change(int(clean_price(carzone_price)), int(clean_price(price)))
 
-            if num > 34 and num <75:
+            if num > 32 and num <75:
                 if(link != None and price != None):
-                    print("https://www.yad2.co.il/vehicles/"+link)
-                    print(f"og price is {price} and mehiron price {carzone_price}")
-                    to_save = "https://www.yad2.co.il/vehicles/"+link+f" \n og price is {price} and mehiron price {carzone_price}"
-                    links.append("https://www.yad2.co.il/vehicles/"+link)
-                    good_prices.append(to_save)
-                    print(good_prices)
+                    print("found a big orice change, checking if it is any good")
+                    f_link = "https://www.yad2.co.il/vehicles/"+link
+                    if(check_yad2_conditions_with_hand_km_and_date(f_link)):
+                        print(f_link)
+
+                        print(f"og price is {price} and mehiron price {carzone_price}")
+                        to_save = f_link+f" \n og price is {price} and mehiron price {carzone_price}"
+                        good_prices.append(to_save)
+                        print(good_prices)
                     
                     # send_str_email(
                     #     sender_email="beridayan2008@gmail.com",
@@ -167,20 +257,20 @@ while (True):
                     #     subject=f"Filtered Cars from Yad2 {count}",
                     #     item_list=to_save)
 
-                    send_str_email(
-                         sender_email="beridayan2008@gmail.com",
-                           receiver_email="beridayan2008@gmail.com",
-                         app_password="qapuzlpqfeiueerl",  # No spaces!
-                         subject=f"Filtered Cars from Yad2 {count}",
-                         item_list=to_save)
-                    count+=1
+                        send_str_email(
+                            sender_email="beridayan2008@gmail.com",
+                            receiver_email="beridayan2008@gmail.com",
+                            app_password="qapuzlpqfeiueerl",  # No spaces!
+                            subject=f"Filtered Cars from Yad2 {count}",
+                            item_list=to_save)
+                        count+=1
 
             else:
                 print('change is less then 30 ' + str(num))
                 print(f"og price is {price} and mehiron price {carzone_price}")
     i+=1
    
-    if i ==6:
+    if i ==15:
         send_list_email(
             sender_email="beridayan2008@gmail.com",
             receiver_email="beridayan2008@gmail.com",
