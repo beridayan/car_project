@@ -12,13 +12,15 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import re
 
-import re
-import undetected_chromedriver as uc
-from datetime import datetime, timedelta
-from bs4 import BeautifulSoup
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+
+from flask import Flask, render_template, request
+import threading
+
+from yad2_scraper import fetch_vehicle_category, OrderVehiclesBy
+
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 def check_yad2_conditions_with_hand_km_and_date(url,maxdaysup,maxhand,maxkm):
     options = uc.ChromeOptions()
@@ -141,10 +143,6 @@ def percentage_change(a, b):
         return float('inf')  # or 0, depending on your preference
     
 
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-
 def send_list_email(sender_email: str, receiver_email: str, app_password: str, subject: str, item_list: list):
     """
     Sends a list of items as an email.
@@ -206,7 +204,6 @@ def send_str_email(sender_email: str, receiver_email: str, app_password: str, su
 
 
  
-from yad2_scraper import fetch_vehicle_category, OrderVehiclesBy
 def main_app(minprice, maxprice , minyear, maxyear,maxdaysup,maxhand,maxkm,email,pages_to_run):
     i=1
     count =1
@@ -274,9 +271,6 @@ def main_app(minprice, maxprice , minyear, maxyear,maxdaysup,maxhand,maxkm,email
             break
 
 
-
-from flask import Flask, render_template, request
-import threading
 
 app = Flask(__name__)
 
