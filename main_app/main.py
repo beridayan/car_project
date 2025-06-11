@@ -20,7 +20,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-def check_yad2_conditions_with_hand_km_and_date(url):
+def check_yad2_conditions_with_hand_km_and_date(url,maxdaysup,maxhand,maxkm):
     options = uc.ChromeOptions()
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-blink-features=AutomationControlled")
@@ -75,7 +75,7 @@ def check_yad2_conditions_with_hand_km_and_date(url):
                 try:
                     post_date = datetime.strptime(date_str, "%d/%m/%y").date()
                     today = datetime.today().date()
-                    ten_days_ago = today - timedelta(days=10)
+                    ten_days_ago = today - timedelta(days=maxdaysup)
                     date_ok = post_date >= ten_days_ago
                     print(f"Post date: {post_date}, Today: {today}, Date OK? {date_ok}")
                 except ValueError:
@@ -84,7 +84,7 @@ def check_yad2_conditions_with_hand_km_and_date(url):
             print("Date span not found")
 
         # 3) Final check (ensure hand and km are not None)
-        if hand is not None and km is not None and hand <= 2 and km <= 140000 and date_ok:
+        if hand is not None and km is not None and hand <= maxhand and km <= maxkm and date_ok:
             print("All conditions met, returning True")
             return True
 
@@ -207,74 +207,98 @@ def send_str_email(sender_email: str, receiver_email: str, app_password: str, su
 
  
 from yad2_scraper import fetch_vehicle_category, OrderVehiclesBy
-i=1
-count =1
-good_prices = []
+def main_app(minprice, maxprice , minyear, maxyear,maxdaysup,maxhand,maxkm,email,pages_to_run):
+    i=1
+    count =1
+    good_prices = []
 
-while (True):
-    try:
-        category = fetch_vehicle_category(
-            "cars",
-            page=i,
-            price_range=(10000, 45000),
-            year_range=(2010, 2023),
-            order_by=OrderVehiclesBy.DATE 
-        )
-        category.load_next_data()
-    except:
-        break
-    cars = category.get_tags()
-    for car in cars:
-        name = getattr(car, 'model', 'No name')
-        year = getattr(car, 'year', 'No year')
-        price = getattr(car, 'price_string', 'No price')
-        hand = getattr(car, 'hand', 'No hand')
-        link = getattr(car, 'relative_link', None)
-        marketing = getattr(car, 'marketing_text', None)
-        f_marketing =  " ".join(str(marketing).split(' ')[0:1])
-        print(name + str(year))
-        print(i)
-        carzone_price = carzone(name,year,f_marketing) 
-        if carzone_price != None:
-            num = percentage_change(int(clean_price(carzone_price)), int(clean_price(price)))
+    while (True):
+        try:
+            category = fetch_vehicle_category(
+                "cars",
+                page=i,
+                price_range=(minprice, maxprice),
+                year_range=(minyear, maxyear),
+                order_by=OrderVehiclesBy.DATE 
+            )
+            category.load_next_data()
+        except:
+            break
+        cars = category.get_tags()
+        for car in cars:
+            name = getattr(car, 'model', 'No name')
+            year = getattr(car, 'year', 'No year')
+            price = getattr(car, 'price_string', 'No price')
+            hand = getattr(car, 'hand', 'No hand')
+            link = getattr(car, 'relative_link', None)
+            marketing = getattr(car, 'marketing_text', None)
+            f_marketing =  " ".join(str(marketing).split(' ')[0:1])
+            print(name + str(year))
+            print(i)
+            carzone_price = carzone(name,year,f_marketing) 
+            if carzone_price != None:
+                num = percentage_change(int(clean_price(carzone_price)), int(clean_price(price)))
 
-            if num > 32 and num <75:
-                if(link != None and price != None):
-                    print("found a big orice change, checking if it is any good")
-                    f_link = "https://www.yad2.co.il/vehicles/"+link
-                    if(check_yad2_conditions_with_hand_km_and_date(f_link)):
-                        print(f_link)
+                if num > 32 and num <75:
+                    if(link != None and price != None):
+                        print("found a big orice change, checking if it is any good")
+                        f_link = "https://www.yad2.co.il/vehicles/"+link
+                        if(check_yad2_conditions_with_hand_km_and_date(f_link,maxdaysup,maxhand,maxkm)):
+                            print(f_link)
+                            print(f"og price is {price} and mehiron price {carzone_price}")
+                            
+                            to_save = f_link+f" \n og price is {price} and mehiron price {carzone_price}"
+                            good_prices.append(to_save)
+                            print(good_prices)
 
-                        print(f"og price is {price} and mehiron price {carzone_price}")
-                        to_save = f_link+f" \n og price is {price} and mehiron price {carzone_price}"
-                        good_prices.append(to_save)
-                        print(good_prices)
-                    
-                    # send_str_email(
-                    #     sender_email="beridayan2008@gmail.com",
-                    #     receiver_email="icon333@gmail.com",
-                    #     app_password="qapuzlpqfeiueerl",  # No spaces!
-                    #     subject=f"Filtered Cars from Yad2 {count}",
-                    #     item_list=to_save)
+                            send_str_email(
+                                sender_email="beridayan2008@gmail.com",
+                                receiver_email=email,
+                                app_password="qapuzlpqfeiueerl",  # No spaces!
+                                subject=f"Filtered Cars from Yad2 {count}",
+                                item_list=to_save)
+                            count+=1
 
-                        send_str_email(
-                            sender_email="beridayan2008@gmail.com",
-                            receiver_email="beridayan2008@gmail.com",
-                            app_password="qapuzlpqfeiueerl",  # No spaces!
-                            subject=f"Filtered Cars from Yad2 {count}",
-                            item_list=to_save)
-                        count+=1
+                else:
+                    print('change is less then 30 ' + str(num))
+                    print(f"og price is {price} and mehiron price {carzone_price}")
+        i+=1
+    
+        if i ==pages_to_run:
+            send_list_email(
+                sender_email="beridayan2008@gmail.com",
+                receiver_email=email,
+                app_password="qapuzlpqfeiueerl",  # No spaces!
+                subject=f"full list filterd cars ",
+                item_list=good_prices)
+            break
 
-            else:
-                print('change is less then 30 ' + str(num))
-                print(f"og price is {price} and mehiron price {carzone_price}")
-    i+=1
-   
-    if i ==15:
-        send_list_email(
-            sender_email="beridayan2008@gmail.com",
-            receiver_email="beridayan2008@gmail.com",
-            app_password="qapuzlpqfeiueerl",  # No spaces!
-            subject=f"full list filterd cars ",
-            item_list=good_prices)
-        break
+
+
+from flask import Flask, render_template, request
+import threading
+
+app = Flask(__name__)
+
+@app.route("/", methods=["GET", "POST"])
+def index():
+    if request.method == "POST":
+        minprice = int(request.form["minprice"])
+        maxprice = int(request.form["maxprice"])
+        minyear = int(request.form["minyear"])
+        maxyear = int(request.form["maxyear"])
+        maxdaysup = int(request.form["maxdaysup"])
+        maxhand = int(request.form["maxhand"])
+        maxkm = int(request.form["maxkm"])
+        email = request.form["email"]
+        pages_to_run = int(request.form["pages_to_run"])
+
+        # Run main_app in a new thread to avoid blocking the Flask app
+        threading.Thread(target=main_app, args=(minprice, maxprice, minyear, maxyear, maxdaysup, maxhand, maxkm, email, pages_to_run)).start()
+
+        return "<h2>✅ Your request is being processed. You'll get an email once the results are ready.</h2>"
+    
+    return render_template("index.html")
+
+if __name__ == "__main__":
+    app.run(debug=True)
