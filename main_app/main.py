@@ -15,6 +15,7 @@ import re
 
 from flask import Flask, render_template, request
 import threading
+import webbrowser
 
 from yad2_scraper import fetch_vehicle_category, OrderVehiclesBy
 
@@ -98,6 +99,8 @@ def check_yad2_conditions_with_hand_km_and_date(url,maxdaysup,maxhand,maxkm):
         driver.quit()
 
 
+def open_browser():
+    webbrowser.open_new("http://127.0.0.1:5000/")
 
 # פתח דפדפן (כאן כרום)
 # עבור לאתר
@@ -236,7 +239,7 @@ def main_app(minprice, maxprice , minyear, maxyear,maxdaysup,maxhand,maxkm,email
             if carzone_price != None:
                 num = percentage_change(int(clean_price(carzone_price)), int(clean_price(price)))
 
-                if num > 32 and num <75:
+                if num > 32 and num <90:
                     if(link != None and price != None):
                         print("found a big orice change, checking if it is any good")
                         f_link = "https://www.yad2.co.il/vehicles/"+link
@@ -295,4 +298,5 @@ def index():
     return render_template("index.html")
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    threading.Timer(1, open_browser).start()  # פותח את הדפדפן אחרי דיליי קטן
+    app.run(debug=False)
