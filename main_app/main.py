@@ -121,7 +121,7 @@ def carzone(car_name: str, car_year: str,marketing :str):
         )
 
         # מזין את שם הרכב והשנה
-        search_input.send_keys(f"{car_name} {car_year} ")
+        search_input.send_keys(f"{car_name}  {car_year} ")
         time.sleep(0.15)
         search_input.send_keys(Keys.RETURN)
 
