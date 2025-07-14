@@ -1,14 +1,6 @@
 [
   {
-    "concept": "3+3",
-    "explanation": "3 plus 3 equals 6 because you count forward 3 steps from 3"
-  },
-  {
-    "concept": "2+2",
-    "explanation": "2 plus 2 equals 4 because you add two to two."
-  },
-  {
-    "concept": "4*4",
-    "explanation": "4*4 equals 16 because you add 4 to itself 4 times"
+    "concept": "adding numbers (+)",
+    "explanation": "Addition means combining or putting together numbers to get a total. The symbol \"+\" means add. To add numbers, you count up from the first number by the amount of the second number. Examples:\n- 2 + 3 = 5 (start with 2, count up 3 more: 3, 4, 5)\n- 5 + 4 = 9 (start with 5, count up 4 more: 6, 7, 8, 9)\n- 10 + 15 = 25 (start with 10, add 15 more to get 25)\n- 100 + 100 = 200 (start with 100, add 100 more to get 200)\n\nThe basic rule is: first number + second number = total sum"
   }
 ]
