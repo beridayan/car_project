@@ -1,0 +1,14 @@
+[
+  {
+    "concept": "3+3",
+    "explanation": "3 plus 3 equals 6 because you count forward 3 steps from 3"
+  },
+  {
+    "concept": "2+2",
+    "explanation": "2 plus 2 equals 4 because you add two to two."
+  },
+  {
+    "concept": "4*4",
+    "explanation": "4*4 equals 16 because you add 4 to itself 4 times"
+  }
+]
