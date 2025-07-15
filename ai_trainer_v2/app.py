@@ -68,7 +68,7 @@ def index():
   <style>
     body { 
       font-family: Arial, sans-serif; 
-      max-width: 800px; 
+      max-width: 900px; 
       margin: 20px auto; 
       padding: 20px;
       background-color: #f5f5f5;
@@ -80,6 +80,20 @@ def index():
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       margin-bottom: 20px;
     }
+    .teach-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .teach-section {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 6px;
+      border-left: 4px solid #007bff;
+    }
+    .fact-section {
+      border-left-color: #28a745;
+    }
     textarea, input { 
       width: 100%; 
       padding: 10px; 
@@ -87,6 +101,7 @@ def index():
       border: 1px solid #ddd;
       border-radius: 4px;
       font-size: 14px;
+      box-sizing: border-box;
     }
     button { 
       padding: 12px 20px; 
@@ -98,6 +113,20 @@ def index():
       cursor: pointer;
     }
     button:hover { background-color: #0056b3; }
+    .fact-btn { 
+      background-color: #28a745; 
+    }
+    .fact-btn:hover { 
+      background-color: #218838; 
+    }
+    .delete-btn { 
+      background-color: #dc3545; 
+      padding: 6px 12px; 
+      font-size: 12px; 
+      margin: 5px;
+      float: right;
+    }
+    .delete-btn:hover { background-color: #c82333; }
     #answer { 
       background: #e9ecef; 
       padding: 15px; 
@@ -118,11 +147,25 @@ def index():
       background: white;
       border-radius: 4px;
       border: 1px solid #dee2e6;
+      position: relative;
     }
-    .concept { font-weight: bold; color: #007bff; }
-    .explanation { margin-left: 10px; color: #6c757d; }
+    .concept { 
+      font-weight: bold; 
+      color: #007bff; 
+      margin-bottom: 5px;
+    }
+    .fact { 
+      font-weight: bold; 
+      color: #28a745; 
+      margin-bottom: 5px;
+    }
+    .explanation { 
+      margin-left: 10px; 
+      color: #6c757d; 
+    }
     h1 { color: #343a40; text-align: center; }
     h2 { color: #495057; border-bottom: 2px solid #dee2e6; padding-bottom: 5px; }
+    h3 { color: #495057; margin-top: 0; }
     .status { 
       padding: 10px; 
       margin: 10px 0; 
@@ -130,6 +173,26 @@ def index():
       background: #d4edda;
       color: #155724;
       border: 1px solid #c3e6cb;
+    }
+    .memory-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .item-type {
+      font-size: 12px;
+      background: #6c757d;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 3px;
+      margin-right: 10px;
+    }
+    .concept-type {
+      background: #007bff;
+    }
+    .fact-type {
+      background: #28a745;
     }
   </style>
 </head>
@@ -139,10 +202,23 @@ def index():
 
   <div class="container">
     <h2>📚 Teach the AI</h2>
-    <input id="concept" placeholder="Concept (e.g., 'photosynthesis', '2+2', 'Python loops')" />
-    <textarea id="explanation" placeholder="Detailed explanation of the concept..." rows="4"></textarea>
-    <button onclick="teach()">Teach</button>
-    <div id="teachResult"></div>
+    <div class="teach-container">
+      <div class="teach-section">
+        <h3>💡 Concepts</h3>
+        <input id="concept" placeholder="Concept (e.g., 'photosynthesis', 'gravity', 'democracy')" />
+        <textarea id="conceptExplanation" placeholder="Detailed explanation of the concept..." rows="4"></textarea>
+        <button onclick="teachConcept()">Teach Concept</button>
+        <div id="conceptResult"></div>
+      </div>
+      
+      <div class="teach-section fact-section">
+        <h3>📋 Facts</h3>
+        <input id="factName" placeholder="Fact name (e.g., 'Paris capital', 'Earth age', 'water formula')" />
+        <textarea id="factContent" placeholder="Simple fact or statement..." rows="4"></textarea>
+        <button class="fact-btn" onclick="teachFact()">Add Fact</button>
+        <div id="factResult"></div>
+      </div>
+    </div>
   </div>
 
   <div class="container">
@@ -153,16 +229,20 @@ def index():
   </div>
 
   <div class="container">
-    <h2>🧠 AI's Memory</h2>
-    <button onclick="loadMemory()">Refresh Memory</button>
-    <button onclick="clearMemory()" style="background-color: #dc3545;">Clear All Memory</button>
+    <div class="memory-header">
+      <h2>🧠 AI's Memory</h2>
+      <div>
+        <button onclick="loadMemory()">Refresh Memory</button>
+        <button onclick="clearMemory()" style="background-color: #dc3545;">Clear All Memory</button>
+      </div>
+    </div>
     <div id="memory"></div>
   </div>
 
   <script>
-    async function teach() {
+    async function teachConcept() {
       const concept = document.getElementById('concept').value.trim();
-      const explanation = document.getElementById('explanation').value.trim();
+      const explanation = document.getElementById('conceptExplanation').value.trim();
       if (!concept || !explanation) {
         alert("Please enter both concept and explanation.");
         return;
@@ -170,13 +250,32 @@ def index():
       const res = await fetch('/teach', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({concept, explanation})
+        body: JSON.stringify({concept, explanation, type: 'concept'})
       });
       const data = await res.json();
-      document.getElementById('teachResult').innerHTML = `<div class="status">${data.message || data.error}</div>`;
+      document.getElementById('conceptResult').innerHTML = `<div class="status">${data.message || data.error}</div>`;
       document.getElementById('concept').value = '';
-      document.getElementById('explanation').value = '';
-      loadMemory(); // Refresh memory display
+      document.getElementById('conceptExplanation').value = '';
+      loadMemory();
+    }
+
+    async function teachFact() {
+      const concept = document.getElementById('factName').value.trim();
+      const explanation = document.getElementById('factContent').value.trim();
+      if (!concept || !explanation) {
+        alert("Please enter both fact name and content.");
+        return;
+      }
+      const res = await fetch('/teach', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({concept, explanation, type: 'fact'})
+      });
+      const data = await res.json();
+      document.getElementById('factResult').innerHTML = `<div class="status">${data.message || data.error}</div>`;
+      document.getElementById('factName').value = '';
+      document.getElementById('factContent').value = '';
+      loadMemory();
     }
 
     async function ask() {
@@ -200,14 +299,39 @@ def index():
       const data = await res.json();
       const memoryDiv = document.getElementById('memory');
       if (data.memory.length === 0) {
-        memoryDiv.innerHTML = '<p style="color: #6c757d; font-style: italic;">No concepts learned yet.</p>';
+        memoryDiv.innerHTML = '<p style="color: #6c757d; font-style: italic;">No concepts or facts learned yet.</p>';
       } else {
-        memoryDiv.innerHTML = data.memory.map(item => 
-          `<div class="memory-item">
-            <div class="concept">${item.concept}</div>
+        memoryDiv.innerHTML = data.memory.map(item => {
+          const itemType = item.type || 'concept';
+          const typeClass = itemType === 'fact' ? 'fact' : 'concept';
+          const typeLabel = itemType === 'fact' ? 'FACT' : 'CONCEPT';
+          const typeLabelClass = itemType === 'fact' ? 'fact-type' : 'concept-type';
+          
+          return `<div class="memory-item">
+            <div class="${typeClass}">
+              <span class="item-type ${typeLabelClass}">${typeLabel}</span>
+              ${item.concept}
+              <button class="delete-btn" onclick="deleteItem('${item.concept}')">🗑️ Delete</button>
+            </div>
             <div class="explanation">${item.explanation}</div>
-          </div>`
-        ).join('');
+          </div>`;
+        }).join('');
+      }
+    }
+
+    async function deleteItem(concept) {
+      if (confirm(`Are you sure you want to delete "${concept}"?`)) {
+        const res = await fetch('/delete', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({concept})
+        });
+        const data = await res.json();
+        if (data.success) {
+          loadMemory();
+        } else {
+          alert(data.error || 'Failed to delete item');
+        }
       }
     }
 
@@ -233,6 +357,7 @@ def teach():
     data = request.json
     concept = data.get("concept")
     explanation = data.get("explanation")
+    item_type = data.get("type", "concept")  # Default to concept if not specified
 
     if not concept or not explanation:
         return jsonify({"error": "Missing concept or explanation"}), 400
@@ -241,13 +366,14 @@ def teach():
     for i, item in enumerate(memory):
         if item["concept"].lower() == concept.lower():
             memory[i]["explanation"] = explanation
+            memory[i]["type"] = item_type
             save_memory(memory)
-            return jsonify({"message": f"Updated concept '{concept}'"}), 200
+            return jsonify({"message": f"Updated {item_type} '{concept}'"}), 200
 
-    # Add new concept
-    memory.append({"concept": concept, "explanation": explanation})
+    # Add new concept or fact
+    memory.append({"concept": concept, "explanation": explanation, "type": item_type})
     save_memory(memory)
-    return jsonify({"message": f"Learned new concept '{concept}'"}), 200
+    return jsonify({"message": f"Learned new {item_type} '{concept}'"}), 200
 
 @app.route('/ask', methods=['POST'])
 def ask():
@@ -273,6 +399,25 @@ def ask():
 @app.route('/memory', methods=['GET'])
 def get_memory():
     return jsonify({"memory": memory}), 200
+
+@app.route('/delete', methods=['POST'])
+def delete_item():
+    global memory
+    data = request.json
+    concept = data.get("concept")
+    
+    if not concept:
+        return jsonify({"error": "Missing concept name"}), 400
+    
+    # Find and remove the item
+    for i, item in enumerate(memory):
+        if item["concept"].lower() == concept.lower():
+            deleted_item = memory.pop(i)
+            save_memory(memory)
+            item_type = deleted_item.get("type", "concept")
+            return jsonify({"success": True, "message": f"Deleted {item_type} '{deleted_item['concept']}'"}), 200
+    
+    return jsonify({"error": f"Item '{concept}' not found"}), 404
 
 @app.route('/clear', methods=['POST'])
 def clear_memory():
